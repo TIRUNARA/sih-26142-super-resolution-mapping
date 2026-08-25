@@ -1,0 +1,64 @@
+{
+  "project_name": "SIH-26142 Super Resolution Mapping",
+  "version": "1.0.0",
+  "description": "Deep Learning Super-Resolution & Sub-Pixel Mapping system for NTRO Satellite Imagery",
+  "components": [
+    {
+      "id": "ingestion",
+      "name": "Multi-Spectral Ingestion Engine",
+      "type": "Data Pipeline",
+      "tech": "Rasterio / GDAL",
+      "description": "Loads GeoTIFF rasters (RGB + NIR), handles spatial projections (CRS), and generates 128x128 patches."
+    },
+    {
+      "id": "model_core",
+      "name": "Super-Resolution Neural Network",
+      "type": "AI Engine",
+      "tech": "PyTorch / SwinIR / Residual Attention",
+      "description": "4x spatial upscaling neural network tailored for satellite multi-spectral bands with physics-guided preservation."
+    },
+    {
+      "id": "subpixel_mapping",
+      "name": "Sub-Pixel Mapper (SPM)",
+      "type": "Post-Processing",
+      "tech": "Softmax Classification / Pixel Unmixing",
+      "description": "Allocates fractional land cover classes within mixed pixels to crisp high-resolution spatial boundaries."
+    },
+    {
+      "id": "api_server",
+      "name": "Inference Web API",
+      "type": "Backend API",
+      "tech": "FastAPI / Uvicorn",
+      "description": "REST endpoints serving batch tile inference, geotiff export, and sub-pixel metrics."
+    },
+    {
+      "id": "frontend_ui",
+      "name": "Interactive Geospatial Workbench",
+      "type": "Frontend UI",
+      "tech": "HTML5 / Vanilla CSS / Leaflet.js",
+      "description": "Interactive web app for split-screen swipe comparison, zoom-level super-resolution rendering, and spectral analysis."
+    }
+  ],
+  "data_flow": [
+    {
+      "from": "ingestion",
+      "to": "model_core",
+      "label": "Normalized Multi-Band Patches"
+    },
+    {
+      "from": "model_core",
+      "to": "subpixel_mapping",
+      "label": "4x Spatial Resolution Feature Maps"
+    },
+    {
+      "from": "subpixel_mapping",
+      "to": "api_server",
+      "label": "Enhanced GeoTIFF Output & Class Maps"
+    },
+    {
+      "from": "api_server",
+      "to": "frontend_ui",
+      "label": "JSON Telemetry & Image Stream"
+    }
+  ]
+}
