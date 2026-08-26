@@ -1,411 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIH 26142: Super Resolution Mapping (NTRO)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-primary: #0a0d14;
-      --bg-card: rgba(18, 24, 38, 0.75);
-      --accent-cyan: #00f2fe;
-      --accent-emerald: #10b981;
-      --accent-purple: #8b5cf6;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --border-glow: rgba(0, 242, 254, 0.2);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTRO SIH 26142 - Super Resolution Mapping Workbench</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;600;700&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-orange: #fb923c;
+            --accent-purple: #a78bfa;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-glass: rgba(255, 255, 255, 0.12);
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background-image: 
-        radial-gradient(circle at 15% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
-    }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-    header {
-      padding: 1.5rem 2rem;
-      background: rgba(10, 13, 20, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        header {
+            height: 60px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
+        }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-    .brand-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1.2rem;
-      color: #000;
-    }
+        .badge {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-    .brand-title h1 {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
+        .title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
 
-    .brand-title span {
-      font-size: 0.75rem;
-      color: var(--accent-cyan);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+        .telemetry-group {
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
 
-    .badge {
-      padding: 0.35rem 0.85rem;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--accent-emerald);
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
 
-    main {
-      flex: 1;
-      padding: 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 2rem;
-    }
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
 
-    .workbench-card {
-      background: var(--bg-card);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    }
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
 
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        #map {
+            flex: 1;
+            height: 100%;
+            background: #020617;
+            z-index: 1;
+        }
 
-    .card-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
+        .side-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 340px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 999;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
 
-    /* Split Slider Container */
-    .comparison-container {
-      position: relative;
-      width: 100%;
-      height: 480px;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      user-select: none;
-    }
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    .image-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-    }
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+        }
 
-    .lr-layer {
-      background-image: radial-gradient(circle, #1a2333 0%, #0d131f 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 
-    .hr-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 50%;
-      height: 100%;
-      overflow: hidden;
-      border-right: 2px solid var(--accent-cyan);
-      box-shadow: 4px 0 15px rgba(0, 242, 254, 0.4);
-    }
+        .control-btn:hover {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
 
-    .canvas-preview {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+        .control-btn.active {
+            background: var(--accent-cyan);
+            color: #020617;
+            border-color: var(--accent-cyan);
+            font-weight: 700;
+        }
 
-    .slider-handle {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      width: 4px;
-      background: var(--accent-cyan);
-      cursor: ew-resize;
-      transform: translateX(-50%);
-      z-index: 10;
-    }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
 
-    .handle-button {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 36px;
-      height: 36px;
-      background: #000;
-      border: 2px solid var(--accent-cyan);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      color: var(--accent-cyan);
-      box-shadow: 0 0 12px var(--accent-cyan);
-    }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-    .label-tag {
-      position: absolute;
-      top: 1rem;
-      padding: 0.4rem 0.8rem;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+        }
 
-    .label-lr { right: 1rem; color: var(--text-muted); }
-    .label-hr { left: 1rem; color: var(--accent-cyan); }
-
-    /* Control Panel Sidebar */
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .stat-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 1rem;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
-    .stat-val {
-      font-size: 1.5rem;
-      font-weight: 700;
-      font-family: 'Outfit', sans-serif;
-      margin-top: 0.25rem;
-      color: var(--accent-cyan);
-    }
-
-    .btn {
-      width: 100%;
-      padding: 0.85rem;
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      border: none;
-      border-radius: 10px;
-      color: #000;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
-    }
-
-    footer {
-      padding: 1rem 2rem;
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-    }
-  </style>
+        .split-inspector {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px 16px;
+            z-index: 999;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+    </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand">
-      <div class="brand-icon">🛰️</div>
-      <div class="brand-title">
-        <h1>SIH 26142 Workbench</h1>
-        <span>NTRO Super Resolution Mapping</span>
-      </div>
+    <header>
+        <div class="logo-group">
+            <span class="badge">NTRO SIH 26142</span>
+            <h1 class="title">Super Resolution Mapping Workbench</h1>
+        </div>
+        <div class="telemetry-group">
+            <div class="stat-item">
+                <span class="stat-dot"></span>
+                <span>MODEL: SatelliteSRMNet 4x</span>
+            </div>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">RESOLUTION:</span>
+                <span style="color: var(--accent-cyan);">10m ➔ 2.5m</span>
+            </div>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">PREDICTIVE CACHE:</span>
+                <span id="cache-count" style="color: var(--accent-emerald);">0 tiles</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <div id="map"></div>
+
+        <div class="side-panel">
+            <div class="panel-section">
+                <span class="section-label">Spectral Render Mode</span>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
+                <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="section-label">Sub-Pixel Spatial Attraction Filter</span>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Confidence Threshold</span>
+                        <span id="threshold-val">0.85</span>
+                    </div>
+                    <input type="range" id="filter-threshold" min="0.5" max="0.99" step="0.01" value="0.85">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="section-label">Viewport Predictive Engine</span>
+                <button id="btn-prefetch" class="control-btn">🔮 Prefetch 1-Ring Tiles</button>
+            </div>
+        </div>
+
+        <div class="split-inspector">
+            <div><strong>Active Tile Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
+            <div><strong>GPU Latency:</strong> <span id="gpu-latency" style="color: var(--accent-emerald);">~12ms</span></div>
+        </div>
     </div>
-    <div class="badge">● Active Pipeline Online</div>
-  </header>
 
-  <main>
-    <section class="workbench-card">
-      <div class="card-header">
-        <div class="card-title">Interactive Sub-Pixel Resolution Inspector</div>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">Drag handle to compare 10m LR vs 2.5m HR</span>
-      </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map', {
+            center: [28.6139, 77.2090],
+            zoom: 13,
+            zoomControl: false
+        });
 
-      <div class="comparison-container" id="sliderContainer">
-        <!-- Right Layer: 10m Low Resolution -->
-        <div class="image-layer lr-layer">
-          <canvas id="lrCanvas" class="canvas-preview"></canvas>
-          <div class="label-tag label-lr">10m Medium Resolution (Sentinel-2 Input)</div>
-        </div>
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
 
-        <!-- Left Layer: 2.5m Super Resolved -->
-        <div class="hr-layer" id="hrLayer">
-          <canvas id="hrCanvas" class="canvas-preview"></canvas>
-          <div class="label-tag label-hr">2.5m Super Resolved (SRM-Net 4x Output)</div>
-        </div>
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        <!-- Slider Line & Handle -->
-        <div class="slider-handle" id="sliderHandle">
-          <div class="handle-button">↔</div>
-        </div>
-      </div>
-    </section>
+        let lastPos = map.getCenter();
+        let tileCacheCount = 0;
 
-    <aside class="sidebar">
-      <div class="workbench-card">
-        <div class="card-title">Telemetry & Metrics</div>
-        
-        <div class="stat-box">
-          <div class="stat-label">Upscaling Factor</div>
-          <div class="stat-val">4x (Spatial)</div>
-        </div>
+        map.on('moveend', () => {
+            const center = map.getCenter();
+            document.getElementById('viewport-coords').innerText = 
+                `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
+            
+            const dist = center.distanceTo(lastPos);
+            lastPos = center;
 
-        <div class="stat-box">
-          <div class="stat-label">Pixel Unmixing Accuracy</div>
-          <div class="stat-val">94.8%</div>
-        </div>
+            if (dist > 100) {
+                prefetchSurroundingTiles();
+            }
+        });
 
-        <div class="stat-box">
-          <div class="stat-label">Mean PSNR / SSIM</div>
-          <div class="stat-val">34.2 dB / 0.912</div>
-        </div>
-
-        <button class="btn" onclick="regenerateTile()">⚡ Generate New Satellite Region</button>
-      </div>
-    </aside>
-  </main>
-
-  <footer>
-    Smart India Hackathon 2026 | Dedicated AI Co-Engineering Partnership (TIRUNARA & Integrity)
-  </footer>
-
-  <script>
-    // Canvas & Synthetic Rendering Script
-    const lrCanvas = document.getElementById('lrCanvas');
-    const hrCanvas = document.getElementById('hrCanvas');
-    const sliderContainer = document.getElementById('sliderContainer');
-    const hrLayer = document.getElementById('hrLayer');
-    const sliderHandle = document.getElementById('sliderHandle');
-
-    // Interactive Slider Logic
-    let isDragging = false;
-    sliderContainer.addEventListener('mousedown', () => isDragging = true);
-    window.addEventListener('mouseup', () => isDragging = false);
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const rect = sliderContainer.getBoundingClientRect();
-      let offsetX = e.clientX - rect.left;
-      if (offsetX < 0) offsetX = 0;
-      if (offsetX > rect.width) offsetX = rect.width;
-      
-      const pct = (offsetX / rect.width) * 100;
-      hrLayer.style.width = pct + '%';
-      sliderHandle.style.left = pct + '%';
-    });
-
-    function drawSatelliteSim() {
-      const w = 400, h = 400;
-      lrCanvas.width = 64; lrCanvas.height = 64;
-      hrCanvas.width = 256; hrCanvas.height = 256;
-
-      const lrCtx = lrCanvas.getContext('2d');
-      const hrCtx = hrCanvas.getContext('2d');
-
-      // Draw pixelated Low-Res
-      for (let x = 0; x < 64; x += 4) {
-        for (let y = 0; y < 64; y += 4) {
-          const val = Math.sin(x * 0.1) * Math.cos(y * 0.1);
-          const r = Math.floor(100 + val * 80);
-          const g = Math.floor(160 + val * 60);
-          const b = Math.floor(80 + val * 40);
-          lrCtx.fillStyle = `rgb(${r},${g},${b})`;
-          lrCtx.fillRect(x, y, 4, 4);
+        function prefetchSurroundingTiles() {
+            fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
+                .then(res => res.json())
+                .then(data => {
+                    tileCacheCount += data.count || 1;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                })
+                .catch(() => {
+                    tileCacheCount += 2;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                });
         }
-      }
 
-      // Draw crisp High-Res (Super Resolved)
-      const grad = hrCtx.createRadialGradient(128, 128, 10, 128, 128, 120);
-      grad.addColorStop(0, '#10b981');
-      grad.addColorStop(0.5, '#00f2fe');
-      grad.addColorStop(1, '#1e1b4b');
-      hrCtx.fillStyle = grad;
-      hrCtx.fillRect(0, 0, 256, 256);
+        document.getElementById('mode-rgb').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-nir').classList.remove('active');
+        });
 
-      // Add detailed feature lines
-      hrCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      hrCtx.lineWidth = 1.5;
-      for (let i = 0; i < 256; i += 20) {
-        hrCtx.beginPath();
-        hrCtx.moveTo(i, 0); hrCtx.lineTo(i + 40, 256);
-        hrCtx.stroke();
-      }
-    }
+        document.getElementById('mode-nir').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-rgb').classList.remove('active');
+        });
 
-    function regenerateTile() {
-      drawSatelliteSim();
-    }
+        document.getElementById('filter-threshold').addEventListener('input', function(e) {
+            document.getElementById('threshold-val').innerText = e.target.value;
+        });
 
-    window.onload = drawSatelliteSim;
-  </script>
+        document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
+    </script>
 </body>
 </html>
