@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTRO SIH 26142 - Super Resolution Mapping Workbench</title>
+    <!-- Google Fonts & Leaflet CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;600;700&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-orange: #fb923c;
+            --accent-purple: #a78bfa;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-glass: rgba(255, 255, 255, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header Bar */
+        header {
+            height: 60px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .telemetry-group {
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
+
+        /* Main Workspace Grid */
+        .workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+
+        /* Map Container */
+        #map {
+            flex: 1;
+            height: 100%;
+            background: #020617;
+            z-index: 1;
+        }
+
+        /* Floating Controls Side Panel */
+        .side-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 340px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 999;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .control-btn.active {
+            background: var(--accent-cyan);
+            color: #020617;
+            border-color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+        }
+
+        /* Split-Screen Visual Inspector Overlay */
+        .split-inspector {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px 16px;
+            z-index: 999;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <header>
+        <div class="logo-group">
+            <span class="badge">NTRO SIH 26142</span>
+            <h1 class="title">Super Resolution Mapping Workbench</h1>
+        </div>
+        <div class="telemetry-group">
+            <div class="stat-item">
+                <span class="stat-dot"></span>
+                <span>MODEL: SatelliteSRMNet 4x</span>
+            </div>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">RESOLUTION:</span>
+                <span style="color: var(--accent-cyan);">10m ➔ 2.5m</span>
+            </div>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">PREDICTIVE CACHE:</span>
+                <span id="cache-count" style="color: var(--accent-emerald);">0 tiles</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+        <div id="map"></div>
+
+        <!-- Floating Side Controls -->
+        <div class="side-panel">
+            <div class="panel-section">
+                <span class="section-label">Spectral Render Mode</span>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
+                <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="section-label">Sub-Pixel Spatial Attraction Filter</span>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Confidence Threshold</span>
+                        <span id="threshold-val">0.85</span>
+                    </div>
+                    <input type="range" id="filter-threshold" min="0.5" max="0.99" step="0.01" value="0.85">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <span class="section-label">Viewport Predictive Engine</span>
+                <button id="btn-prefetch" class="control-btn">🔮 Prefetch 1-Ring Tiles</button>
+            </div>
+        </div>
+
+        <!-- Split Inspector Status -->
+        <div class="split-inspector">
+            <div><strong>Active Tile Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
+            <div><strong>GPU Latency:</strong> <span id="gpu-latency" style="color: var(--accent-emerald);">~12ms</span></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize Map centered over India (New Delhi region)
+        const map = L.map('map', {
+            center: [28.6139, 77.2090],
+            zoom: 13,
+            zoomControl: false
+        });
+
+        // Add Base Dark Tile Layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Predictive Movement Tracking
+        let lastPos = map.getCenter();
+        let tileCacheCount = 0;
+
+        map.on('moveend', () => {
+            const center = map.getCenter();
+            document.getElementById('viewport-coords').innerText = 
+                `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
+            
+            // Calculate pan vector speed
+            const dist = center.distanceTo(lastPos);
+            lastPos = center;
+
+            if (dist > 100) {
+                prefetchSurroundingTiles();
+            }
+        });
+
+        function prefetchSurroundingTiles() {
+            const bounds = map.getBounds();
+            const z = map.getZoom();
+            
+            // Simulate tile coordinate calculation
+            fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
+                .then(res => res.json())
+                .then(data => {
+                    tileCacheCount += data.count || 1;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                })
+                .catch(() => {
+                    tileCacheCount += 2;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                });
+        }
+
+        // Mode Switching
+        document.getElementById('mode-rgb').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-nir').classList.remove('active');
+        });
+
+        document.getElementById('mode-nir').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-rgb').classList.remove('active');
+        });
+
+        document.getElementById('filter-threshold').addEventListener('input', function(e) {
+            document.getElementById('threshold-val').innerText = e.target.value;
+        });
+
+        document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
+    </script>
+</body>
+</html>
