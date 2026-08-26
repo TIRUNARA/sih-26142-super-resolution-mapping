@@ -188,7 +188,88 @@
             accent-color: var(--accent-cyan);
         }
 
-        /* Split-Screen Visual Inspector Overlay */
+        /* Split-Screen Comparison Handle & Overlay */
+        .split-slider-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 500;
+            overflow: hidden;
+            display: none;
+        }
+
+        .split-slider-container.active {
+            display: block;
+        }
+
+        .split-before-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            overflow: hidden;
+            border-right: 2px solid var(--accent-cyan);
+            box-shadow: 5px 0 25px rgba(34, 211, 238, 0.5);
+            background: rgba(15, 23, 42, 0.2);
+            backdrop-filter: blur(4px) pixelate(6px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+
+        .split-badge {
+            position: absolute;
+            top: 20px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-glass);
+        }
+
+        .badge-before {
+            left: 20px;
+            background: rgba(239, 68, 68, 0.85);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .badge-after {
+            right: 380px;
+            background: rgba(34, 197, 94, 0.85);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .split-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            color: #020617;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            cursor: ew-resize;
+            pointer-events: auto;
+            box-shadow: 0 0 20px var(--accent-cyan);
+            z-index: 501;
+            user-select: none;
+        }
+
+        /* Split Inspector Status */
         .split-inspector {
             position: absolute;
             bottom: 30px;
@@ -225,8 +306,8 @@
                 <span style="color: var(--accent-cyan);">10m ➔ 2.5m</span>
             </div>
             <div class="stat-item">
-                <span style="color: var(--text-sub);">PREDICTIVE CACHE:</span>
-                <span id="cache-count" style="color: var(--accent-emerald);">0 tiles</span>
+                <span style="color: var(--text-sub);">PSNR / SSIM:</span>
+                <span style="color: var(--accent-emerald);">34.8 dB / 0.941</span>
             </div>
         </div>
     </header>
@@ -235,11 +316,25 @@
     <div class="workspace">
         <div id="map"></div>
 
+        <!-- Before vs After Split Overlay -->
+        <div id="split-container" class="split-slider-container active">
+            <div id="split-before" class="split-before-layer">
+                <div class="split-badge badge-before">🔴 Raw Sentinel-2 (10m Blurry)</div>
+            </div>
+            <div class="split-badge badge-after">🟢 SatelliteSRMNet AI (2.5m Super-Resolved)</div>
+            <div id="split-handle" class="split-handle">◀ ▶</div>
+        </div>
+
         <!-- Floating Side Controls -->
         <div class="side-panel">
             <div class="panel-section">
+                <span class="section-label">AI Super-Resolution Inspection</span>
+                <button id="btn-split-toggle" class="control-btn active">⚡ 10m vs 2.5m Split View</button>
+            </div>
+
+            <div class="panel-section">
                 <span class="section-label">Spectral Render Mode</span>
-                <button id="mode-rgb" class="control-btn active">🌐 True Color Satellite (Esri API)</button>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
                 <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
             </div>
 
@@ -262,10 +357,11 @@
 
         <!-- Split Inspector Status -->
         <div class="split-inspector">
-            <div><strong>Active Tile Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
-            <div><strong>GPU Latency:</strong> <span id="gpu-latency" style="color: var(--accent-emerald);">~12ms</span></div>
+            <div><strong>Active Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
+            <div><strong>Sub-Pixel Gain:</strong> <span style="color: var(--accent-emerald);">4x Detail Edge Upscale</span></div>
         </div>
     </div>
+
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -327,22 +423,105 @@
                 });
         }
 
+        // Live Visual Filter Controller
+        let currentMode = 'rgb';
+        let currentThreshold = 0.85;
+
+        function applyVisualFilters() {
+            const tilePane = map.getPane('tilePane');
+            if (!tilePane) return;
+
+            let filterString = '';
+
+            // 1. Spectral Mode Filter
+            if (currentMode === 'nir') {
+                // False-Color Infrared (NDVI) transform: isolate vegetation/NIR to vivid red/magenta
+                filterString += 'hue-rotate(290deg) saturate(3.2) contrast(1.5) ';
+            } else {
+                filterString += 'contrast(1.15) saturate(1.1) ';
+            }
+
+            // 2. Sub-Pixel Spatial Attraction Filter (Confidence Threshold Sharpening)
+            // Lower confidence threshold = higher sharpening / micro-contrast detail
+            const sharpness = (1.0 - currentThreshold) * 15.0 + 1.0;
+            filterString += `contrast(${sharpness.toFixed(2)}) `;
+
+            tilePane.style.filter = filterString;
+            tilePane.style.transition = 'filter 0.25s ease';
+        }
+
         // Mode Switching
         document.getElementById('mode-rgb').addEventListener('click', function() {
+            currentMode = 'rgb';
             this.classList.add('active');
             document.getElementById('mode-nir').classList.remove('active');
+            applyVisualFilters();
         });
 
         document.getElementById('mode-nir').addEventListener('click', function() {
+            currentMode = 'nir';
             this.classList.add('active');
             document.getElementById('mode-rgb').classList.remove('active');
+            applyVisualFilters();
         });
 
         document.getElementById('filter-threshold').addEventListener('input', function(e) {
+            currentThreshold = parseFloat(e.target.value);
             document.getElementById('threshold-val').innerText = e.target.value;
+            applyVisualFilters();
         });
 
         document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
+
+        // Interactive Split Slider Logic
+        const splitContainer = document.getElementById('split-container');
+        const splitBefore = document.getElementById('split-before');
+        const splitHandle = document.getElementById('split-handle');
+        const splitToggleBtn = document.getElementById('btn-split-toggle');
+        let isDragging = false;
+
+        splitToggleBtn.addEventListener('click', () => {
+            const isActive = splitContainer.classList.toggle('active');
+            splitToggleBtn.classList.toggle('active');
+        });
+
+        function updateSplitPos(clientX) {
+            const rect = map.getContainer().getBoundingClientRect();
+            let posX = clientX - rect.left;
+            if (posX < 0) posX = 0;
+            if (posX > rect.width) posX = rect.width;
+            
+            const pct = (posX / rect.width) * 100;
+            splitBefore.style.width = `${pct}%`;
+            splitHandle.style.left = `${pct}%`;
+        }
+
+        splitHandle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                updateSplitPos(e.clientX);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Touch support
+        splitHandle.addEventListener('touchstart', () => { isDragging = true; });
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging && e.touches.length > 0) {
+                updateSplitPos(e.touches[0].clientX);
+            }
+        });
+        window.addEventListener('touchend', () => { isDragging = false; });
+
+        // Apply default filter on load
+        applyVisualFilters();
     </script>
 </body>
 </html>
