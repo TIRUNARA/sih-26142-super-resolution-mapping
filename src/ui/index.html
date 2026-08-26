@@ -170,24 +170,6 @@
             font-weight: 700;
         }
 
-        .slider-container {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        input[type=range] {
-            width: 100%;
-            accent-color: var(--accent-cyan);
-        }
-
         /* Split-Screen Comparison Handle & Overlay */
         .split-slider-container {
             position: absolute;
@@ -215,7 +197,6 @@
             border-right: 2px solid var(--accent-cyan);
             box-shadow: 5px 0 25px rgba(34, 211, 238, 0.5);
             background: #020617;
-            /* Native 10m Sentinel-2 Spatial Sampling View (Zero artificial blur overlay) */
         }
 
         .split-before-layer::after {
@@ -225,9 +206,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* 10m Satellite Pixel Grid Overlay */
-            background-image: linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px);
+            /* 10m Pixel Boundary Grid */
+            background-image: linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
             background-size: 16px 16px;
             pointer-events: none;
         }
@@ -333,9 +314,9 @@
         <div id="split-container" class="split-slider-container active">
             <div id="split-before" class="split-before-layer">
                 <div id="map-before" style="width: 100vw; height: 100vh; position: absolute; top:0; left:0;"></div>
-                <div class="split-badge badge-before">🔴 Raw Sentinel-2 (10m Blurry)</div>
+                <div class="split-badge badge-before">🔴 Raw Sentinel-2 (10m Data)</div>
             </div>
-            <div class="split-badge badge-after">🟢 SatelliteSRMNet AI (2.5m Super-Resolved)</div>
+            <div class="split-badge badge-after">🟢 SatelliteSRMNet AI (2.5m Output)</div>
             <div id="split-handle" class="split-handle">◀ ▶</div>
         </div>
 
@@ -344,23 +325,6 @@
             <div class="panel-section">
                 <span class="section-label">AI Super-Resolution Inspection</span>
                 <button id="btn-split-toggle" class="control-btn active">⚡ 10m vs 2.5m Split View</button>
-            </div>
-
-            <div class="panel-section">
-                <span class="section-label">Spectral Render Mode</span>
-                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
-                <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
-            </div>
-
-            <div class="panel-section">
-                <span class="section-label">Sub-Pixel Spatial Attraction Filter</span>
-                <div class="slider-container">
-                    <div class="slider-label">
-                        <span>Confidence Threshold</span>
-                        <span id="threshold-val">0.85</span>
-                    </div>
-                    <input type="range" id="filter-threshold" min="0.5" max="0.99" step="0.01" value="0.85">
-                </div>
             </div>
 
             <div class="panel-section">
@@ -388,7 +352,7 @@
             zoomControl: false
         });
 
-        // Secondary Map (Raw 10m Sentinel-2 Low-Res Pixelated View)
+        // Secondary Map (Raw 10m Sentinel-2 View)
         const mapBefore = L.map('map-before', {
             center: [28.6139, 77.2090],
             zoom: 13,
@@ -399,21 +363,34 @@
             boxZoom: false
         });
 
-        // 1. Esri World Imagery (High-Resolution Satellite Layer)
+        // 1. Satellite Base Layer for Map
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri',
             maxZoom: 19
         }).addTo(map);
 
-        // 1b. Raw Low-Res 10m Layer for mapBefore
+        // 1b. Raw Satellite Base Layer for mapBefore
         const satelliteLayerBefore = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19
         }).addTo(mapBefore);
 
-        // Synchronize mapBefore panning and zooming with primary map
-        map.on('move', () => {
+        // Synchronize mapBefore panning, zooming, and viewport bounds with primary map
+        function syncMaps() {
             mapBefore.setView(map.getCenter(), map.getZoom(), { animate: false });
+        }
+        map.on('move', syncMaps);
+        map.on('zoom', syncMaps);
+
+        window.addEventListener('resize', () => {
+            map.invalidateSize();
+            mapBefore.invalidateSize();
+            syncMaps();
         });
+        setTimeout(() => {
+            map.invalidateSize();
+            mapBefore.invalidateSize();
+            syncMaps();
+        }, 300);
 
         // 2. OpenStreetMap Hybrid Labels Overlay
         const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
@@ -433,7 +410,6 @@
             document.getElementById('viewport-coords').innerText = 
                 `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
             
-            // Calculate pan vector speed
             const dist = center.distanceTo(lastPos);
             lastPos = center;
 
@@ -446,7 +422,6 @@
             const bounds = map.getBounds();
             const z = map.getZoom();
             
-            // Simulate tile coordinate calculation
             fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
                 .then(res => res.json())
                 .then(data => {
@@ -458,54 +433,6 @@
                     document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
                 });
         }
-
-        // Live Visual Filter Controller
-        let currentMode = 'rgb';
-        let currentThreshold = 0.85;
-
-        function applyVisualFilters() {
-            const tilePane = map.getPane('tilePane');
-            if (!tilePane) return;
-
-            let filterString = '';
-
-            // 1. Spectral Mode Filter
-            if (currentMode === 'nir') {
-                // False-Color Infrared (NDVI) transform: isolate vegetation/NIR to vivid red/magenta
-                filterString += 'hue-rotate(290deg) saturate(3.2) contrast(1.5) ';
-            } else {
-                filterString += 'contrast(1.15) saturate(1.1) ';
-            }
-
-            // 2. Sub-Pixel Spatial Attraction Filter (Confidence Threshold Sharpening)
-            // Lower confidence threshold = higher sharpening / micro-contrast detail
-            const sharpness = (1.0 - currentThreshold) * 15.0 + 1.0;
-            filterString += `contrast(${sharpness.toFixed(2)}) `;
-
-            tilePane.style.filter = filterString;
-            tilePane.style.transition = 'filter 0.25s ease';
-        }
-
-        // Mode Switching
-        document.getElementById('mode-rgb').addEventListener('click', function() {
-            this.classList.add('active');
-            document.getElementById('mode-nir').classList.remove('active');
-            currentMode = 'rgb';
-            applyVisualFilters();
-        });
-
-        document.getElementById('mode-nir').addEventListener('click', function() {
-            this.classList.add('active');
-            document.getElementById('mode-rgb').classList.remove('active');
-            currentMode = 'nir';
-            applyVisualFilters();
-        });
-
-        document.getElementById('filter-threshold').addEventListener('input', function(e) {
-            currentThreshold = parseFloat(e.target.value);
-            document.getElementById('threshold-val').innerText = currentThreshold.toFixed(2);
-            applyVisualFilters();
-        });
 
         document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
 
@@ -519,6 +446,9 @@
         splitToggleBtn.addEventListener('click', () => {
             splitContainer.classList.toggle('active');
             splitToggleBtn.classList.toggle('active');
+            map.invalidateSize();
+            mapBefore.invalidateSize();
+            syncMaps();
         });
 
         function updateSplitPos(clientX) {
@@ -555,9 +485,6 @@
             }
         });
         window.addEventListener('touchend', () => { isDragging = false; });
-
-        // Apply default visual filters on startup
-        applyVisualFilters();
     </script>
 </body>
 </html>
