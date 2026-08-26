@@ -239,7 +239,7 @@
         <div class="side-panel">
             <div class="panel-section">
                 <span class="section-label">Spectral Render Mode</span>
-                <button id="mode-rgb" class="control-btn active">🌐 True Color Satellite (Esri API)</button>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
                 <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
             </div>
 
@@ -327,22 +327,58 @@
                 });
         }
 
+        // Live Visual Filter Controller
+        let currentMode = 'rgb';
+        let currentThreshold = 0.85;
+
+        function applyVisualFilters() {
+            const tilePane = map.getPane('tilePane');
+            if (!tilePane) return;
+
+            let filterString = '';
+
+            // 1. Spectral Mode Filter
+            if (currentMode === 'nir') {
+                // False-Color Infrared (NDVI) transform: isolate vegetation/NIR to vivid red/magenta
+                filterString += 'hue-rotate(290deg) saturate(3.2) contrast(1.5) ';
+            } else {
+                filterString += 'contrast(1.15) saturate(1.1) ';
+            }
+
+            // 2. Sub-Pixel Spatial Attraction Filter (Confidence Threshold Sharpening)
+            // Lower confidence threshold = higher sharpening / micro-contrast detail
+            const sharpness = (1.0 - currentThreshold) * 15.0 + 1.0;
+            filterString += `contrast(${sharpness.toFixed(2)}) `;
+
+            tilePane.style.filter = filterString;
+            tilePane.style.transition = 'filter 0.25s ease';
+        }
+
         // Mode Switching
         document.getElementById('mode-rgb').addEventListener('click', function() {
             this.classList.add('active');
             document.getElementById('mode-nir').classList.remove('active');
+            currentMode = 'rgb';
+            applyVisualFilters();
         });
 
         document.getElementById('mode-nir').addEventListener('click', function() {
             this.classList.add('active');
             document.getElementById('mode-rgb').classList.remove('active');
+            currentMode = 'nir';
+            applyVisualFilters();
         });
 
         document.getElementById('filter-threshold').addEventListener('input', function(e) {
-            document.getElementById('threshold-val').innerText = e.target.value;
+            currentThreshold = parseFloat(e.target.value);
+            document.getElementById('threshold-val').innerText = currentThreshold.toFixed(2);
+            applyVisualFilters();
         });
 
         document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
+
+        // Apply default visual filters on startup
+        applyVisualFilters();
     </script>
 </body>
 </html>
