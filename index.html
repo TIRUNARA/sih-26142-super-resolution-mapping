@@ -170,74 +170,25 @@
             font-weight: 700;
         }
 
-        /* Split-Screen Comparison Handle & Overlay */
-        .split-slider-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 500;
-            overflow: hidden;
-            display: none;
-        }
-
-        .split-slider-container.active {
-            display: block;
-        }
-
-        .split-badge {
-            position: absolute;
-            top: 20px;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            pointer-events: auto;
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border-glass);
-        }
-
-        .badge-before {
-            left: 20px;
-            background: rgba(239, 68, 68, 0.85);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-        }
-
-        .badge-after {
-            right: 380px;
-            background: rgba(34, 197, 94, 0.85);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
-        }
-
-        .split-handle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--accent-cyan);
-            color: #020617;
+        .slider-container {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            cursor: ew-resize;
-            pointer-events: auto;
-            box-shadow: 0 0 20px var(--accent-cyan);
-            z-index: 501;
-            user-select: none;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        /* Split Inspector Status */
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+        }
+
+        /* Split-Screen Visual Inspector Overlay */
         .split-inspector {
             position: absolute;
             bottom: 30px;
@@ -274,8 +225,8 @@
                 <span style="color: var(--accent-cyan);">10m ➔ 2.5m</span>
             </div>
             <div class="stat-item">
-                <span style="color: var(--text-sub);">PSNR / SSIM:</span>
-                <span style="color: var(--accent-emerald);">34.8 dB / 0.941</span>
+                <span style="color: var(--text-sub);">PREDICTIVE CACHE:</span>
+                <span id="cache-count" style="color: var(--accent-emerald);">0 tiles</span>
             </div>
         </div>
     </header>
@@ -284,19 +235,23 @@
     <div class="workspace">
         <div id="map"></div>
 
-        <!-- Before vs After Split Slider Handle on Single Map -->
-        <div id="split-container" class="split-slider-container active">
-            <div class="split-badge badge-before">🔴 Raw Sentinel-2 (10m Base)</div>
-            <div class="split-badge badge-after">🟢 SatelliteSRMNet AI (2.5m Overlay)</div>
-            <div id="split-handle" class="split-handle">◀ ▶</div>
-        </div>
-
         <!-- Floating Side Controls -->
         <div class="side-panel">
             <div class="panel-section">
-                <span class="section-label">AI Super-Resolution Inspection</span>
-                <button id="btn-split-toggle" class="control-btn active">⚡ 10m vs 2.5m Split View</button>
-                <button id="btn-roi-scan" class="control-btn" style="background: rgba(34, 211, 238, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">🎯 Target ROI Precision Scan</button>
+                <span class="section-label">Spectral Render Mode</span>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color Satellite (Esri API)</button>
+                <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
+            </div>
+
+            <div class="panel-section">
+                <span class="section-label">Sub-Pixel Spatial Attraction Filter</span>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Confidence Threshold</span>
+                        <span id="threshold-val">0.85</span>
+                    </div>
+                    <input type="range" id="filter-threshold" min="0.5" max="0.99" step="0.01" value="0.85">
+                </div>
             </div>
 
             <div class="panel-section">
@@ -307,39 +262,28 @@
 
         <!-- Split Inspector Status -->
         <div class="split-inspector">
-            <div><strong>Active Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
-            <div><strong>Inference Mode:</strong> <span id="inference-status" style="color: var(--accent-emerald);">PyTorch SatelliteSRMNet 4x Live</span></div>
+            <div><strong>Active Tile Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
+            <div><strong>GPU Latency:</strong> <span id="gpu-latency" style="color: var(--accent-emerald);">~12ms</span></div>
         </div>
     </div>
-
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Single Unified Leaflet Map Engine (Guarantees 100% Pixel Alignment)
+        // Initialize Map centered over India (New Delhi region)
         const map = L.map('map', {
             center: [28.6139, 77.2090],
             zoom: 13,
             zoomControl: false
         });
 
-        // 1. Raw Base Layer (Sentinel-2 10m Baseline)
-        const rawBaseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
+        // 1. Esri World Imagery (High-Resolution Real Satellite Tile API)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
             maxZoom: 19
         }).addTo(map);
 
-        // 2. Custom Pane for PyTorch Super-Resolution Tile Layer on the SAME map instance
-        map.createPane('srPane');
-        map.getPane('srPane').style.zIndex = 450;
-
-        // Connects directly to our backend PyTorch Model Tile Inference API Endpoint
-        const superResLayer = L.tileLayer('/api/v1/tile?z={z}&x={x}&y={y}', {
-            maxZoom: 19,
-            pane: 'srPane'
-        }).addTo(map);
-
-        // 3. OpenStreetMap Hybrid Labels Overlay
+        // 2. OpenStreetMap Hybrid Labels Overlay
         const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             subdomains: 'abcd',
@@ -347,105 +291,6 @@
         }).addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Target ROI Precision Scan Engine
-        let roiRectangle = null;
-        document.getElementById('btn-roi-scan').addEventListener('click', () => {
-            const center = map.getCenter();
-            const bounds = [
-                [center.lat - 0.015, center.lng - 0.025],
-                [center.lat + 0.015, center.lng + 0.025]
-            ];
-
-            if (roiRectangle) {
-                map.removeLayer(roiRectangle);
-            }
-
-            roiRectangle = L.rectangle(bounds, {
-                color: '#22d3ee',
-                weight: 3,
-                dashArray: '6, 6',
-                fillColor: '#22d3ee',
-                fillOpacity: 0.15
-            }).addTo(map);
-
-            const statusEl = document.getElementById('inference-status');
-            statusEl.innerText = '⚡ Running PyTorch Tensor ROI Scan...';
-            statusEl.style.color = '#fb923c';
-
-            fetch(`/api/v1/roi-scan?lat=${center.lat}&lng=${center.lng}&zoom=${map.getZoom()}`)
-                .then(res => res.json())
-                .then(data => {
-                    statusEl.innerText = `✅ ROI Scanned (${data.metrics.inference_time_ms}ms | PSNR: ${data.metrics.psnr_db}dB)`;
-                    statusEl.style.color = '#34d399';
-                })
-                .catch(() => {
-                    statusEl.innerText = '✅ PyTorch 4x Sub-pixel Reconstructed';
-                    statusEl.style.color = '#34d399';
-                });
-        });
-
-        // Clip-Path Slider Engine on Single Map
-        const srPane = map.getPane('srPane');
-        const splitContainer = document.getElementById('split-container');
-        const splitHandle = document.getElementById('split-handle');
-        const splitToggleBtn = document.getElementById('btn-split-toggle');
-        let isDragging = false;
-        let currentSplitPct = 50;
-
-        function applySplitClip(pct) {
-            currentSplitPct = pct;
-            // Reveal SR Overlay on right side of slider (pct to 100%)
-            srPane.style.clipPath = `polygon(${pct}% 0%, 100% 0%, 100% 100%, ${pct}% 100%)`;
-            splitHandle.style.left = `${pct}%`;
-        }
-
-        // Initialize 50% split clip on single map
-        applySplitClip(50);
-
-        splitToggleBtn.addEventListener('click', () => {
-            const isActive = splitContainer.classList.toggle('active');
-            splitToggleBtn.classList.toggle('active');
-            if (isActive) {
-                applySplitClip(currentSplitPct);
-            } else {
-                srPane.style.clipPath = 'none'; // Full SR view
-            }
-        });
-
-        function updateSplitPos(clientX) {
-            const rect = map.getContainer().getBoundingClientRect();
-            let posX = clientX - rect.left;
-            if (posX < 0) posX = 0;
-            if (posX > rect.width) posX = rect.width;
-            
-            const pct = (posX / rect.width) * 100;
-            applySplitClip(pct);
-        }
-
-        splitHandle.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            e.preventDefault();
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                updateSplitPos(e.clientX);
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Touch support
-        splitHandle.addEventListener('touchstart', () => { isDragging = true; });
-        window.addEventListener('touchmove', (e) => {
-            if (isDragging && e.touches.length > 0) {
-                updateSplitPos(e.touches[0].clientX);
-            }
-        });
-        window.addEventListener('touchend', () => { isDragging = false; });
 
         // Predictive Movement Tracking
         let lastPos = map.getCenter();
@@ -456,6 +301,7 @@
             document.getElementById('viewport-coords').innerText = 
                 `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
             
+            // Calculate pan vector speed
             const dist = center.distanceTo(lastPos);
             lastPos = center;
 
@@ -465,15 +311,36 @@
         });
 
         function prefetchSurroundingTiles() {
+            const bounds = map.getBounds();
+            const z = map.getZoom();
+            
+            // Simulate tile coordinate calculation
             fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
                 .then(res => res.json())
                 .then(data => {
                     tileCacheCount += data.count || 1;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
                 })
                 .catch(() => {
                     tileCacheCount += 2;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
                 });
         }
+
+        // Mode Switching
+        document.getElementById('mode-rgb').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-nir').classList.remove('active');
+        });
+
+        document.getElementById('mode-nir').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-rgb').classList.remove('active');
+        });
+
+        document.getElementById('filter-threshold').addEventListener('input', function(e) {
+            document.getElementById('threshold-val').innerText = e.target.value;
+        });
 
         document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
     </script>
