@@ -1,0 +1,8 @@
+{
+  "project": "SIH 26142 - Super Resolution Mapping",
+  "target": "render",
+  "blueprint": "render.yaml",
+  "healthCheck": "/api/v1/status",
+  "requestedBy": "TIRUNARA",
+  "assignedAgent": "jules"
+}
