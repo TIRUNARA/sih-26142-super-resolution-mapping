@@ -21,7 +21,7 @@ except ImportError:
     from src.models.super_resolution import SatelliteSRMNet
     from src.data.synthetic_geospatial import generate_synthetic_satellite_tile
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 UI_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../ui"))
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -128,8 +128,8 @@ class SIHHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
 def run_server():
-    print(f"🚀 Starting NTRO SIH 26142 API Server on http://localhost:{PORT}")
-    with socketserver.TCPServer(("", PORT), SIHHandler) as httpd:
+    print(f"🚀 Starting NTRO SIH 26142 API Server on http://0.0.0.0:{PORT}")
+    with socketserver.TCPServer(("0.0.0.0", PORT), SIHHandler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

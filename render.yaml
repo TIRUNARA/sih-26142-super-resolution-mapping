@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sih-26142-super-resolution-mapping
+    env: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/status
+    envVars:
+      - key: PORT
+        value: 8000
