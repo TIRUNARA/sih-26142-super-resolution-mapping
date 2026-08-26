@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NTRO SIH 26142 - Super Resolution Mapping Workbench</title>
+    <!-- Google Fonts & Leaflet CSS -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;600;700&display=swap">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     
@@ -36,6 +37,7 @@
             flex-direction: column;
         }
 
+        /* Top Header Bar */
         header {
             height: 60px;
             background: var(--panel-bg);
@@ -92,12 +94,14 @@
             box-shadow: 0 0 8px var(--accent-emerald);
         }
 
+        /* Main Workspace Grid */
         .workspace {
             flex: 1;
             display: flex;
             position: relative;
         }
 
+        /* Map Container */
         #map {
             flex: 1;
             height: 100%;
@@ -105,6 +109,7 @@
             z-index: 1;
         }
 
+        /* Floating Controls Side Panel */
         .side-panel {
             position: absolute;
             top: 20px;
@@ -183,6 +188,7 @@
             accent-color: var(--accent-cyan);
         }
 
+        /* Split-Screen Visual Inspector Overlay */
         .split-inspector {
             position: absolute;
             bottom: 30px;
@@ -203,6 +209,7 @@
 </head>
 <body>
 
+    <!-- Header Bar -->
     <header>
         <div class="logo-group">
             <span class="badge">NTRO SIH 26142</span>
@@ -224,13 +231,15 @@
         </div>
     </header>
 
+    <!-- Main Workspace -->
     <div class="workspace">
         <div id="map"></div>
 
+        <!-- Floating Side Controls -->
         <div class="side-panel">
             <div class="panel-section">
                 <span class="section-label">Spectral Render Mode</span>
-                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color Satellite (Esri API)</button>
                 <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
             </div>
 
@@ -251,28 +260,39 @@
             </div>
         </div>
 
+        <!-- Split Inspector Status -->
         <div class="split-inspector">
             <div><strong>Active Tile Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
             <div><strong>GPU Latency:</strong> <span id="gpu-latency" style="color: var(--accent-emerald);">~12ms</span></div>
         </div>
     </div>
 
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Initialize Map centered over India (New Delhi region)
         const map = L.map('map', {
             center: [28.6139, 77.2090],
             zoom: 13,
             zoomControl: false
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        // 1. Esri World Imagery (High-Resolution Real Satellite Tile API)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        }).addTo(map);
+
+        // 2. OpenStreetMap Hybrid Labels Overlay
+        const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+        // Predictive Movement Tracking
         let lastPos = map.getCenter();
         let tileCacheCount = 0;
 
@@ -281,6 +301,7 @@
             document.getElementById('viewport-coords').innerText = 
                 `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
             
+            // Calculate pan vector speed
             const dist = center.distanceTo(lastPos);
             lastPos = center;
 
@@ -290,6 +311,10 @@
         });
 
         function prefetchSurroundingTiles() {
+            const bounds = map.getBounds();
+            const z = map.getZoom();
+            
+            // Simulate tile coordinate calculation
             fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
                 .then(res => res.json())
                 .then(data => {
@@ -302,6 +327,7 @@
                 });
         }
 
+        // Mode Switching
         document.getElementById('mode-rgb').addEventListener('click', function() {
             this.classList.add('active');
             document.getElementById('mode-nir').classList.remove('active');

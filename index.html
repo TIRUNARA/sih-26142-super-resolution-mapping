@@ -239,7 +239,7 @@
         <div class="side-panel">
             <div class="panel-section">
                 <span class="section-label">Spectral Render Mode</span>
-                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color Satellite (Esri API)</button>
                 <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
             </div>
 
@@ -277,9 +277,15 @@
             zoomControl: false
         });
 
-        // Add Base Dark Tile Layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        // 1. Esri World Imagery (High-Resolution Real Satellite Tile API)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        }).addTo(map);
+
+        // 2. OpenStreetMap Hybrid Labels Overlay
+        const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
