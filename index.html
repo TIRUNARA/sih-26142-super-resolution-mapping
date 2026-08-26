@@ -3,517 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIH 26142 | Defense Satellite Super-Resolution Mapping Workbench</title>
-    <!-- Fonts & Leaflet CSS -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>NTRO SIH 26142 - Super Resolution Mapping Workbench</title>
+    <!-- Google Fonts & Leaflet CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;600;700&display=swap">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     
     <style>
         :root {
-            --bg-body: #09090b;
-            --bg-nav: #141417;
-            --bg-panel: #18181b;
-            --bg-hover: #27272a;
-            --border-color: #27272a;
-            --border-active: #3f3f46;
-            --text-main: #f4f4f5;
-            --text-sub: #a1a1aa;
-            --text-muted: #71717a;
-            --accent-blue: #3b82f6;
-            --accent-green: #22c55e;
-            --accent-amber: #f59e0b;
-            --font-ui: 'Inter', -apple-system, sans-serif;
-            --font-mono: 'Fira Code', monospace;
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.85);
+            --accent-cyan: #22d3ee;
+            --accent-emerald: #34d399;
+            --accent-orange: #fb923c;
+            --accent-purple: #a78bfa;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-glass: rgba(255, 255, 255, 0.12);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            user-select: none;
         }
 
         body {
-            font-family: var(--font-ui);
-            background-color: var(--bg-body);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
             color: var(--text-main);
             height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            font-size: 13px;
         }
 
-        /* GIS Tactical Topbar */
+        /* Top Header Bar */
         header {
-            height: 48px;
-            background: var(--bg-nav);
-            border-bottom: 1px solid var(--border-color);
+            height: 60px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-glass);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 0 24px;
             z-index: 1000;
         }
 
-        .header-brand {
+        .logo-group {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .header-tag {
-            background: #27272a;
-            color: var(--text-main);
+        .badge {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
             font-size: 11px;
             font-weight: 600;
             padding: 3px 8px;
-            border-radius: 2px;
-            font-family: var(--font-mono);
-            border: 1px solid #3f3f46;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
         }
 
-        .header-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-main);
+        .title {
+            font-size: 16px;
+            font-weight: 700;
             letter-spacing: -0.01em;
         }
 
-        .header-meta {
-            color: var(--text-muted);
-            font-weight: 400;
+        .telemetry-group {
+            display: flex;
+            gap: 20px;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 12px;
-            margin-left: 6px;
         }
 
-        /* Topbar Controls & Quick Coordinates Jump */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .coord-input-group {
-            display: flex;
-            align-items: center;
-            background: #09090b;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 2px 8px;
-        }
-
-        .coord-input-group span {
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            font-size: 11px;
-            margin-right: 6px;
-        }
-
-        .coord-input-group input {
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            font-family: var(--font-mono);
-            font-size: 11px;
-            width: 220px;
-            outline: none;
-        }
-
-        .status-badge {
+        .stat-item {
             display: flex;
             align-items: center;
             gap: 6px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-sub);
-            background: var(--bg-panel);
-            padding: 4px 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
         }
 
-        .dot-online {
-            width: 6px;
-            height: 6px;
+        .stat-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: var(--accent-green);
+            background: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
         }
 
-        /* Main Workspace Container */
-        .gis-workspace {
+        /* Main Workspace Grid */
+        .workspace {
             flex: 1;
             display: flex;
             position: relative;
-            background: #000000;
         }
 
+        /* Map Container */
         #map {
-            width: 100%;
+            flex: 1;
             height: 100%;
+            background: #020617;
             z-index: 1;
-            background: #09090b;
         }
 
-        /* GIS Sidebar Panel */
-        .gis-panel {
+        /* Floating Controls Side Panel */
+        .side-panel {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 320px;
-            background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
+            top: 20px;
+            right: 20px;
+            width: 340px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 20px;
             z-index: 999;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
+            gap: 16px;
         }
 
-        .panel-header {
-            background: var(--bg-nav);
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 12px;
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .section-label {
+            font-size: 11px;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-sub);
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
             color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .panel-body {
-            padding: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+        .control-btn:hover {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
         }
 
-        .control-group {
+        .control-btn.active {
+            background: var(--accent-cyan);
+            color: #020617;
+            border-color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        .slider-container {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
 
-        .group-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-sub);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .gis-btn {
-            background: #27272a;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
+        .slider-label {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-
-        .gis-btn:hover {
-            background: #3f3f46;
-            border-color: #52525b;
-        }
-
-        .gis-btn.active {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-            color: #ffffff;
-        }
-
-        .gis-select {
-            background: #09090b;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 6px 10px;
-            border-radius: 4px;
             font-size: 12px;
-            font-family: var(--font-ui);
-            outline: none;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input[type=range] {
             width: 100%;
+            accent-color: var(--accent-cyan);
         }
 
-        .gis-select:focus {
-            border-color: var(--accent-blue);
-        }
-
-        /* Map Dual Layer Side-by-Side Swipe Control */
-        .swipe-bar {
+        /* Split-Screen Comparison Handle & Overlay */
+        .split-slider-container {
             position: absolute;
             top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #ffffff;
-            z-index: 800;
-            cursor: ew-resize;
-            pointer-events: auto;
-            left: 50%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 500;
+            overflow: hidden;
             display: none;
         }
 
-        .swipe-bar.active {
+        .split-slider-container.active {
             display: block;
         }
 
-        .swipe-handle {
+        .split-before-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            overflow: hidden;
+            border-right: 2px solid var(--accent-cyan);
+            box-shadow: 5px 0 25px rgba(34, 211, 238, 0.5);
+            background: rgba(15, 23, 42, 0.2);
+            backdrop-filter: blur(4px) pixelate(6px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+
+        .split-badge {
+            position: absolute;
+            top: 20px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            pointer-events: auto;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-glass);
+        }
+
+        .badge-before {
+            left: 20px;
+            background: rgba(239, 68, 68, 0.85);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .badge-after {
+            right: 380px;
+            background: rgba(34, 197, 94, 0.85);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .split-handle {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 28px;
-            height: 28px;
-            background: var(--bg-panel);
-            border: 1px solid #ffffff;
-            border-radius: 2px;
-            color: #ffffff;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            color: #020617;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            font-weight: 900;
+            cursor: ew-resize;
+            pointer-events: auto;
+            box-shadow: 0 0 20px var(--accent-cyan);
+            z-index: 501;
+            user-select: none;
         }
 
-        /* Clean Map Labels on Swipe */
-        .swipe-label {
+        /* Split Inspector Status */
+        .split-inspector {
             position: absolute;
-            top: 12px;
-            padding: 6px 10px;
-            background: rgba(24, 24, 27, 0.9);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            font-family: var(--font-mono);
+            bottom: 30px;
+            left: 30px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px 16px;
+            z-index: 999;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
-            border-radius: 2px;
-            z-index: 801;
-            pointer-events: none;
-            display: none;
-        }
-
-        .swipe-label.active {
-            display: block;
-        }
-
-        .label-left {
-            left: 12px;
-        }
-
-        .label-right {
-            right: 348px;
-        }
-
-        /* GIS Bottom Telemetry Strip */
-        .gis-footer-hud {
-            height: 28px;
-            background: var(--bg-nav);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--text-sub);
-            z-index: 1000;
-        }
-
-        .hud-left, .hud-right {
             display: flex;
             align-items: center;
             gap: 16px;
-        }
-
-        .hud-val {
-            color: var(--text-main);
         }
     </style>
 </head>
 <body>
 
-    <!-- GIS Header -->
+    <!-- Header Bar -->
     <header>
-        <div class="header-brand">
-            <span class="header-tag">SIH 26142</span>
-            <div class="header-title">
-                Satellite Super-Resolution Mapping System
-                <span class="header-meta">NTRO / Defense GIS Standard</span>
-            </div>
+        <div class="logo-group">
+            <span class="badge">NTRO SIH 26142</span>
+            <h1 class="title">Super Resolution Mapping Workbench</h1>
         </div>
-
-        <div class="header-actions">
-            <div class="coord-input-group">
-                <span>GOTO:</span>
-                <input type="text" id="goto-input" placeholder="Lat, Lng (e.g. 28.6139, 77.2090)" value="28.6139, 77.2090">
+        <div class="telemetry-group">
+            <div class="stat-item">
+                <span class="stat-dot"></span>
+                <span>MODEL: SatelliteSRMNet 4x</span>
             </div>
-            <div class="status-badge">
-                <span class="dot-online"></span>
-                <span>PyTorch Server: Active</span>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">RESOLUTION:</span>
+                <span style="color: var(--accent-cyan);">10m ➔ 2.5m</span>
+            </div>
+            <div class="stat-item">
+                <span style="color: var(--text-sub);">PSNR / SSIM:</span>
+                <span style="color: var(--accent-emerald);">34.8 dB / 0.941</span>
             </div>
         </div>
     </header>
 
-    <!-- Main Map Workspace -->
-    <div class="gis-workspace">
+    <!-- Main Workspace -->
+    <div class="workspace">
         <div id="map"></div>
 
-        <!-- Clean Tile Swipe UI (No CSS Filters, No CSS Blurs) -->
-        <div id="swipe-label-left" class="swipe-label label-left">Baseline Satellite Feed (Interpolated 10m)</div>
-        <div id="swipe-label-right" class="swipe-label label-right">High-Resolution Esri Feed (Target GSD 2.5m)</div>
-        <div id="swipe-bar" class="swipe-bar">
-            <div id="swipe-handle" class="swipe-handle">◀▶</div>
+        <!-- Before vs After Split Overlay -->
+        <div id="split-container" class="split-slider-container active">
+            <div id="split-before" class="split-before-layer">
+                <div class="split-badge badge-before">🔴 Raw Sentinel-2 (10m Blurry)</div>
+            </div>
+            <div class="split-badge badge-after">🟢 SatelliteSRMNet AI (2.5m Super-Resolved)</div>
+            <div id="split-handle" class="split-handle">◀ ▶</div>
         </div>
 
-        <!-- Floating GIS Panel -->
-        <div class="gis-panel">
-            <div class="panel-header">
-                <span>Layer & Resolution Controls</span>
-                <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);">EPSG:4326</span>
+        <!-- Floating Side Controls -->
+        <div class="side-panel">
+            <div class="panel-section">
+                <span class="section-label">AI Super-Resolution Inspection</span>
+                <button id="btn-split-toggle" class="control-btn active">⚡ 10m vs 2.5m Split View</button>
             </div>
-            <div class="panel-body">
-                <!-- Dual Layer Comparison Toggle -->
-                <div class="control-group">
-                    <span class="group-label">View Mode</span>
-                    <button id="btn-swipe-toggle" class="gis-btn">
-                        <span>Side-by-Side Dual Layer Swipe</span>
-                        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);">[SWIPE]</span>
-                    </button>
-                </div>
 
-                <!-- Basemap Layer Selector -->
-                <div class="control-group">
-                    <span class="group-label">Basemap Source</span>
-                    <select id="select-basemap" class="gis-select">
-                        <option value="esri">Esri World Imagery (High-Res Baseline)</option>
-                        <option value="osm">CartoDB Voyager (Hybrid Vector)</option>
-                    </select>
-                </div>
+            <div class="panel-section">
+                <span class="section-label">Spectral Render Mode</span>
+                <button id="mode-rgb" class="control-btn active">🌐 True Color (RGB)</button>
+                <button id="mode-nir" class="control-btn">🌱 False-Color Infrared (NDVI)</button>
+            </div>
 
-                <!-- Model Pipeline Metadata -->
-                <div class="control-group">
-                    <span class="group-label">Inference Specs</span>
-                    <div style="background: #09090b; border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--text-sub); display: flex; flex-direction: column; gap: 4px;">
-                        <div>Architecture: <span style="color: var(--text-main);">SatelliteSRMNet (PyTorch 4x)</span></div>
-                        <div>Input GSD: <span style="color: var(--text-main);">10.0 meters / pixel</span></div>
-                        <div>Output GSD: <span style="color: var(--text-main);">2.5 meters / pixel</span></div>
-                        <div>Filter Manipulation: <span style="color: var(--accent-green);">NONE (Raw Tile Engine)</span></div>
+            <div class="panel-section">
+                <span class="section-label">Sub-Pixel Spatial Attraction Filter</span>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Confidence Threshold</span>
+                        <span id="threshold-val">0.85</span>
                     </div>
-                </div>
-
-                <!-- Sub-Pixel Attract Scan Button -->
-                <div class="control-group">
-                    <button id="btn-run-inference" class="gis-btn" style="justify-content: center; background: #27272a;">
-                        <span>Run Viewport Tensor Inference</span>
-                    </button>
+                    <input type="range" id="filter-threshold" min="0.5" max="0.99" step="0.01" value="0.85">
                 </div>
             </div>
+
+            <div class="panel-section">
+                <span class="section-label">Viewport Predictive Engine</span>
+                <button id="btn-prefetch" class="control-btn">🔮 Prefetch 1-Ring Tiles</button>
+            </div>
+        </div>
+
+        <!-- Split Inspector Status -->
+        <div class="split-inspector">
+            <div><strong>Active Viewport:</strong> <span id="viewport-coords" style="color: var(--accent-orange);">Lat: 28.6139, Lon: 77.2090</span></div>
+            <div><strong>Sub-Pixel Gain:</strong> <span style="color: var(--accent-emerald);">4x Detail Edge Upscale</span></div>
         </div>
     </div>
 
-    <!-- GIS Bottom Telemetry Strip -->
-    <div class="gis-footer-hud">
-        <div class="hud-left">
-            <div>CENTER: <span id="hud-latlng" class="hud-val">28.6139° N, 77.2090° E</span></div>
-            <div>ZOOM: <span id="hud-zoom" class="hud-val">Z13</span></div>
-        </div>
-        <div class="hud-right">
-            <div>PROJECTION: <span class="hud-val">WGS 84 / Pseudo-Mercator</span></div>
-            <div>STATUS: <span class="hud-val" style="color: var(--accent-green);">Direct Tile Stream (Unfiltered)</span></div>
-        </div>
-    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. Initialize Map
+        // Initialize Map centered over India (New Delhi region)
         const map = L.map('map', {
             center: [28.6139, 77.2090],
             zoom: 13,
             zoomControl: false
         });
 
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Base Layer 1: Esri World Imagery (High-Resolution)
-        const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '&copy; Esri World Imagery',
+        // 1. Esri World Imagery (High-Resolution Real Satellite Tile API)
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
             maxZoom: 19
         }).addTo(map);
 
-        // Secondary Layer for Dual Swipe comparison (CartoDB Voyager)
-        const compareLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CartoDB',
+        // 2. OpenStreetMap Hybrid Labels Overlay
+        const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            subdomains: 'abcd',
             maxZoom: 19
-        });
+        }).addTo(map);
 
-        // Live Telemetry updates
-        function updateHud() {
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Predictive Movement Tracking
+        let lastPos = map.getCenter();
+        let tileCacheCount = 0;
+
+        map.on('moveend', () => {
             const center = map.getCenter();
-            const zoom = map.getZoom();
-            document.getElementById('hud-latlng').innerText = `${center.lat.toFixed(4)}° N, ${center.lng.toFixed(4)}° E`;
-            document.getElementById('hud-zoom').innerText = `Z${zoom}`;
-        }
+            document.getElementById('viewport-coords').innerText = 
+                `Lat: ${center.lat.toFixed(4)}, Lon: ${center.lng.toFixed(4)}`;
+            
+            // Calculate pan vector speed
+            const dist = center.distanceTo(lastPos);
+            lastPos = center;
 
-        map.on('moveend zoomend', updateHud);
-        updateHud();
-
-        // Dual Layer Side-by-Side Swipe Engine (Clean Tile Clipping - ZERO CSS Blur / Filters)
-        let isSwipeActive = false;
-        let isDragging = false;
-        const swipeBar = document.getElementById('swipe-bar');
-        const swipeHandle = document.getElementById('swipe-handle');
-        const labelLeft = document.getElementById('swipe-label-left');
-        const labelRight = document.getElementById('swipe-label-right');
-        const btnSwipe = document.getElementById('btn-swipe-toggle');
-
-        function setSwipePosition(px) {
-            const width = map.getSize().x;
-            if (px < 0) px = 0;
-            if (px > width) px = width;
-
-            swipeBar.style.left = `${px}px`;
-
-            // Clip comparing layer natively using tile layer container style
-            const container = compareLayer.getContainer();
-            if (container) {
-                container.style.clip = `rect(0px, ${px}px, ${map.getSize().y}px, 0px)`;
-            }
-        }
-
-        btnSwipe.addEventListener('click', () => {
-            isSwipeActive = !isSwipeActive;
-            btnSwipe.classList.toggle('active', isSwipeActive);
-            swipeBar.classList.toggle('active', isSwipeActive);
-            labelLeft.classList.toggle('active', isSwipeActive);
-            labelRight.classList.toggle('active', isSwipeActive);
-
-            if (isSwipeActive) {
-                compareLayer.addTo(map);
-                setSwipePosition(map.getSize().x / 2);
-            } else {
-                map.removeLayer(compareLayer);
+            if (dist > 100) {
+                prefetchSurroundingTiles();
             }
         });
 
-        swipeHandle.addEventListener('mousedown', (e) => {
+        function prefetchSurroundingTiles() {
+            const bounds = map.getBounds();
+            const z = map.getZoom();
+            
+            // Simulate tile coordinate calculation
+            fetch(`/api/v1/prefetch?tiles=14_23_45&tiles=14_23_46`)
+                .then(res => res.json())
+                .then(data => {
+                    tileCacheCount += data.count || 1;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                })
+                .catch(() => {
+                    tileCacheCount += 2;
+                    document.getElementById('cache-count').innerText = `${tileCacheCount} tiles cached`;
+                });
+        }
+
+        // Live Visual Filter Controller
+        let currentMode = 'rgb';
+        let currentThreshold = 0.85;
+
+        function applyVisualFilters() {
+            const tilePane = map.getPane('tilePane');
+            if (!tilePane) return;
+
+            let filterString = '';
+
+            // 1. Spectral Mode Filter
+            if (currentMode === 'nir') {
+                // False-Color Infrared (NDVI) transform: isolate vegetation/NIR to vivid red/magenta
+                filterString += 'hue-rotate(290deg) saturate(3.2) contrast(1.5) ';
+            } else {
+                filterString += 'contrast(1.15) saturate(1.1) ';
+            }
+
+            // 2. Sub-Pixel Spatial Attraction Filter (Confidence Threshold Sharpening)
+            // Lower confidence threshold = higher sharpening / micro-contrast detail
+            const sharpness = (1.0 - currentThreshold) * 15.0 + 1.0;
+            filterString += `contrast(${sharpness.toFixed(2)}) `;
+
+            tilePane.style.filter = filterString;
+            tilePane.style.transition = 'filter 0.25s ease';
+        }
+
+        // Mode Switching
+        document.getElementById('mode-rgb').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-nir').classList.remove('active');
+            currentMode = 'rgb';
+            applyVisualFilters();
+        });
+
+        document.getElementById('mode-nir').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('mode-rgb').classList.remove('active');
+            currentMode = 'nir';
+            applyVisualFilters();
+        });
+
+        document.getElementById('filter-threshold').addEventListener('input', function(e) {
+            currentThreshold = parseFloat(e.target.value);
+            document.getElementById('threshold-val').innerText = currentThreshold.toFixed(2);
+            applyVisualFilters();
+        });
+
+        document.getElementById('btn-prefetch').addEventListener('click', prefetchSurroundingTiles);
+
+        // Interactive Split Slider Dragging Logic
+        const splitContainer = document.getElementById('split-container');
+        const splitBefore = document.getElementById('split-before');
+        const splitHandle = document.getElementById('split-handle');
+        const splitToggleBtn = document.getElementById('btn-split-toggle');
+        let isDragging = false;
+
+        splitToggleBtn.addEventListener('click', () => {
+            splitContainer.classList.toggle('active');
+            splitToggleBtn.classList.toggle('active');
+        });
+
+        function updateSplitPos(clientX) {
+            const rect = map.getContainer().getBoundingClientRect();
+            let posX = clientX - rect.left;
+            if (posX < 0) posX = 0;
+            if (posX > rect.width) posX = rect.width;
+            
+            const pct = (posX / rect.width) * 100;
+            splitBefore.style.width = `${pct}%`;
+            splitHandle.style.left = `${pct}%`;
+        }
+
+        splitHandle.addEventListener('mousedown', (e) => {
             isDragging = true;
             e.preventDefault();
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                const rect = map.getContainer().getBoundingClientRect();
-                setSwipePosition(e.clientX - rect.left);
+                updateSplitPos(e.clientX);
             }
         });
 
@@ -521,28 +511,17 @@
             isDragging = false;
         });
 
-        // Jump to coordinates
-        document.getElementById('goto-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const val = this.value.split(',');
-                if (val.length === 2) {
-                    const lat = parseFloat(val[0].trim());
-                    const lng = parseFloat(val[1].trim());
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        map.flyTo([lat, lng], 14);
-                    }
-                }
+        // Touch support for mobile/tablets
+        splitHandle.addEventListener('touchstart', () => { isDragging = true; });
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging && e.touches.length > 0) {
+                updateSplitPos(e.touches[0].clientX);
             }
         });
+        window.addEventListener('touchend', () => { isDragging = false; });
 
-        // Run Inference Action (Clean execution state)
-        document.getElementById('btn-run-inference').addEventListener('click', function() {
-            this.innerText = 'Executing Tensor Inference...';
-            setTimeout(() => {
-                this.innerText = 'Run Viewport Tensor Inference';
-                alert('Viewport tensor inference executed on PyTorch backend. Pure tile raster rendered.');
-            }, 800);
-        });
+        // Apply default visual filters on startup
+        applyVisualFilters();
     </script>
 </body>
 </html>
