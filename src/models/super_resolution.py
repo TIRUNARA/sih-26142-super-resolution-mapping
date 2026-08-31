@@ -12,7 +12,7 @@ class ChannelAttention(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Linear(channels, channels // reduction, bias=False),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True)
             nn.Linear(channels // reduction, channels, bias=False),
             nn.Sigmoid()
         )
